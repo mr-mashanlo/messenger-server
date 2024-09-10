@@ -1,9 +1,10 @@
 const { Schema, model } = require( 'mongoose' );
 
 const MessageModel = new Schema( {
-  senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  receiverId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  content: { type: String, required: true },
+  chatId: { type: Schema.Types.ObjectId, ref: 'Chat' },
+  senderId: { type: Schema.Types.ObjectId, ref: 'User' },
+  receiverId: { type: Schema.Types.ObjectId, ref: 'User' },
+  content: { text: { type: String }, media: { type: String } },
   timestamp: { type: Date, default: Date.now }
 } );
 

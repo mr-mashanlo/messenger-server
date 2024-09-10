@@ -1,6 +1,7 @@
 const WebSocket = require( 'ws' );
 const jwt = require( 'jsonwebtoken' );
 const UserModel = require( '../schemas/userModel' );
+const ChatModel = require( '../schemas/chatModel' );
 
 const chatWebSocket = ( server ) => {
   const wss = new WebSocket.Server( { server } );
@@ -21,25 +22,38 @@ const chatWebSocket = ( server ) => {
     }
 
     const senderId = verifiedToken._id;
-    const users = await UserModel.find().select( '-password' );
     activeConnections.set( senderId, ws );
-    const updatedUsers = users.map( user => ( Array.from( activeConnections.keys() ).includes( user.id ) ? { ...user._doc, online: true } : user ) );
-    activeConnections.forEach( connection => connection.send( JSON.stringify( { type: 'users', data: updatedUsers } ) ) );
+    await UserModel.updateOne( { _id: senderId }, { $set: { online: true } } );
+    activeConnections.forEach( connection => connection.send( JSON.stringify( { type: 'user_connected', userId: senderId } ) ) );
 
-    ws.on( 'message', ( message ) => {
+    ws.on( 'message', async ( message ) => {
       const parsedMessage = JSON.parse( message );
-      const receiverId = parsedMessage.receiverId;
-      const messageContent = parsedMessage.data;
-      const targetWs = activeConnections.get( receiverId );
-      if ( targetWs && targetWs.readyState === WebSocket.OPEN ) {
-        targetWs.send( JSON.stringify( { type: 'message', senderId, receiverId, data: messageContent } ) );
+      const reciever = activeConnections.get( parsedMessage.recieverId );
+
+      let chat = await ChatModel.findOne( { members: [ parsedMessage.senderId, parsedMessage.recieverId ] } );
+      if ( !chat ) {
+        chat = await ChatModel.create( { members: [ parsedMessage.senderId, parsedMessage.recieverId ] } );
+        const sender = activeConnections.get( parsedMessage.senderId );
+        sender.send( JSON.stringify( { type: 'chat', chatId: chat._id } ) );
+      }
+
+      if ( reciever && reciever.readyState === WebSocket.OPEN ) {
+        reciever.send( JSON.stringify(
+          {
+            type: 'message',
+            chatId: chat._id,
+            senderId: parsedMessage.senderId,
+            timestamp: parsedMessage.timestamp,
+            content: { text: parsedMessage.content.text }
+          }
+        ) );
       }
     } );
 
-    ws.on( 'close', () => {
+    ws.on( 'close', async () => {
       activeConnections.delete( senderId );
-      const updatedUsers = users.map( user => ( Array.from( activeConnections.keys() ).includes( user.id ) ? { ...user._doc, online: true } : user ) );
-      activeConnections.forEach( connection => connection.send( JSON.stringify( { type: 'users', data: updatedUsers } ) ) );
+      await UserModel.updateOne( { _id: senderId }, { $set: { online: false } } );
+      activeConnections.forEach( connection => connection.send( JSON.stringify( { type: 'user_disconnected', userId: senderId } ) ) );
     } );
 
   } );

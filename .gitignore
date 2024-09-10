@@ -1,6 +1,19 @@
 # Folders
 node_modules
 uploads/*
+dist
 
 # Files
 .env
+note-*.md
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
