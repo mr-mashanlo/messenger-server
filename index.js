@@ -1,32 +1,27 @@
 require( 'dotenv' ).config();
-const http = require( 'http' );
 const cors = require( 'cors' );
 const express = require( 'express' );
 const mongoose = require( 'mongoose' );
 const cookieParser = require( 'cookie-parser' );
 const authRouter = require( './routers/authRouter' );
 const userRouter = require( './routers/userRouter' );
-const chatWebSocket = require( './websocket/chatWebSocket' );
 const errorMiddleware = require( './middlewares/errorMiddleware' );
+const authSocketMiddleware = require( './middlewares/authSocketMiddleware' );
+const socket = require( './websocket/socket' );
 
 const app = express();
-const server = http.createServer( app );
-app.use( cors( { credentials: true, origin: [ process.env.FRONT_URI ] } ) );
+
+app.use( cors( { credentials: true, origin: process.env.FRONT_URI } ) );
 app.use( cookieParser() );
 app.use( express.json() );
 app.use( '/auth', authRouter );
 app.use( '/user', userRouter );
 app.use( errorMiddleware );
 
-chatWebSocket( server );
+mongoose.connect( process.env.MONGODB_URI );
 
-const start = async () => {
-  try {
-    await mongoose.connect( process.env.MONGODB_URI );
-    server.listen( process.env.PORT, () => console.log( `Server is running on port ${process.env.PORT}` ) );
-  } catch ( error ) {
-    console.log( error );
-  }
-};
+const server = app.listen( process.env.PORT, () => console.log( `Server is running on port ${process.env.PORT}` ) );
+const io = require( 'socket.io' )( server, { cors: { credentials: true, origin: process.env.FRONT_URI } } );
 
-start();
+io.use( authSocketMiddleware );
+io.on( 'connection', socket );

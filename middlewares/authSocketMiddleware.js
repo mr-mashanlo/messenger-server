@@ -1,8 +1,8 @@
 const jwt = require( 'jsonwebtoken' );
 const { Unauthorized } = require( '../services/errorService' );
 
-const authMiddleware = async ( req, res, next ) => {
-  const token = req.cookies.AToken;
+const authSocketMiddleware = async ( socket, next ) => {
+  const token = socket.handshake.headers.cookie ? socket.handshake.headers.cookie.split( '=' )[1] : null;
 
   if ( !token ) {
     return next( new Unauthorized( [ { path: 'headers', msg: 'Access denied' } ] ) );
@@ -13,9 +13,7 @@ const authMiddleware = async ( req, res, next ) => {
     return next( new Unauthorized( [ { path: 'expired', msg:'Your token has expired' } ] ) );
   }
 
-  req.me = { id: verifiedToken.id, email: verifiedToken.email };
-
   next();
 };
 
-module.exports = authMiddleware;
+module.exports = authSocketMiddleware;
