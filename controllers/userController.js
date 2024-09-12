@@ -5,7 +5,8 @@ class UserController {
 
   getAll = async ( req, res, next ) => {
     try {
-      const users = await UserModel.find().select( '-password' );
+      const id = req.me.id;
+      const users = await UserModel.find( { _id: { $ne: id } } ).select( '-password' );
       return res.send( users );
     } catch ( error ) {
       next( error );

@@ -7,7 +7,7 @@ const authRouter = require( './routers/authRouter' );
 const userRouter = require( './routers/userRouter' );
 const errorMiddleware = require( './middlewares/errorMiddleware' );
 const authSocketMiddleware = require( './middlewares/authSocketMiddleware' );
-const socket = require( './websocket/socket' );
+const socketController = require( './websocket/socketController' );
 
 const app = express();
 
@@ -24,4 +24,4 @@ const server = app.listen( process.env.PORT, () => console.log( `Server is runni
 const io = require( 'socket.io' )( server, { cors: { credentials: true, origin: process.env.FRONT_URI } } );
 
 io.use( authSocketMiddleware );
-io.on( 'connection', socket );
+io.on( 'connection', socketController.onConnect );

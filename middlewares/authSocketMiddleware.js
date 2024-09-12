@@ -13,6 +13,8 @@ const authSocketMiddleware = async ( socket, next ) => {
     return next( new Unauthorized( [ { path: 'expired', msg:'Your token has expired' } ] ) );
   }
 
+  socket.me = { id: verifiedToken._id };
+
   next();
 };
 
