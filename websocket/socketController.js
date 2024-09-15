@@ -1,4 +1,5 @@
 const MessageModel = require( '../schemas/messageModel' );
+const AlertModel = require( '../schemas/alertModel' );
 
 class SocketController {
 
@@ -19,15 +20,30 @@ class SocketController {
   };
 
   onMessage = async ( socket, message ) => {
-    const recieverSocketId = this.activeConnections.get( message.recieverId );
-    if ( recieverSocketId ) socket.to( recieverSocketId ).emit( 'message', message );
     await MessageModel.create( message );
+    const recieverSocketId = this.activeConnections.get( message.recieverId );
+    if ( recieverSocketId ) { socket.to( recieverSocketId ).emit( 'message', message ); };
   };
 
   onFetchMessages = async ( socket, recieverId ) => {
     const senderId = socket.me.id;
     const messages = await MessageModel.find( { $or: [ { senderId, recieverId }, { senderId: recieverId, recieverId: senderId } ] } );
     socket.emit( 'initialize_messages', messages );
+  };
+
+  onFecthAlerts = async ( socket, recieverId ) => {
+    const senderId = socket.me.id;
+    const alerts = await this.saveAndGetAlerts( senderId, recieverId );
+    socket.emit( 'initialize_alerts', alerts );
+  };
+
+  saveAndGetAlerts = async ( senderId, recieverId ) => {
+    let alerts = await AlertModel.findOne( { user: recieverId } );
+    if ( alerts ) {
+      return await AlertModel.findOneAndUpdate( { user: recieverId }, { $addToSet: { alerts: senderId } } );
+    } else {
+      return await AlertModel.create( { user: recieverId, alerts: [ senderId ] } );
+    }
   };
 
 }
